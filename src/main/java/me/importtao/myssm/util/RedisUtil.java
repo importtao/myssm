@@ -1,8 +1,10 @@
 package me.importtao.myssm.util;
 
 import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+
 
 import java.io.Serializable;
 import java.util.Set;
@@ -18,6 +20,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class RedisUtil {
     private Logger logger = Logger.getLogger(RedisUtil.class);
+    @Autowired
     private RedisTemplate<Serializable, Object> redisTemplate;
 
     /**

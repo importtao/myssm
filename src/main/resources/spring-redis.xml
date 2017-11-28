@@ -7,29 +7,36 @@ xsi:schemaLocation="http://www.springframework.org/schema/beans
 http://www.springframework.org/schema/beans/spring-beans.xsd
 http://www.springframework.org/schema/context
 http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd"><!-- scanner redis properties  -->
-    <context:property-placeholder location="classpath:redis.properties" />
-    <!-- jedis 配置 -->
+    <context:property-placeholder  location="classpath:redis.properties" ignore-unresolvable="true"/>
+    <!-- 连接池 配置 -->
+    <!--（1）如果你有多个数据源需要通过<context:property-placeholder管理，且不愿意放在一个配置文件里，那么一定要加上ignore-unresolvable=“true"-->
+    <!--（2）注意新版的（具体从哪个版本开始不清楚，有兴趣可以查一下）JedisPoolConfig的property name，不是maxActive而是maxTotal，而且没有maxWait属性，建议看一下Jedis源码。-->
+    <!-- redis连接池 -->
     <bean id="poolConfig" class="redis.clients.jedis.JedisPoolConfig">
-        <property name="maxIdle" value="${redis.maxIdle}"/>
-        <property name="maxWaitMillis" value="${redis.maxWait}"/>
-        <property name="testOnBorrow" value="${redis.testOnBorrow}"/>
+        <property name="maxTotal" value="${redis.maxActive}"></property>
+        <property name="maxIdle" value="${redis.maxIdle}"></property>
+        <property name="maxWaitMillis" value="${redis.maxWait}"></property>
+        <property name="testOnBorrow" value="${redis.testOnBorrow}"></property>
     </bean>
-    <!-- redis服务器中心 -->
-    <bean id="connectionFactory" class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory">
-        <property name="poolConfig" ref="poolConfig"/>
-        <property name="port" value="${redis.port}"/>
-        <property name="hostName" value="${redis.host}"/>
-        <property name="password" value="${redis.password}"/>
-        <!--<property name="timeout" value="${redis.timeout}"></property>-->
+    <!-- redis连接工厂 -->
+    <bean id="redisConnectionFactory" class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory">
+        <property name="hostName" value="${redis.host}"></property>
+        <property name="port" value="${redis.port}"></property>
+        <!--<property name="password" value="${redis.password}"></property>-->
+        <property name="poolConfig" ref="poolConfig"></property>
     </bean>
-    <bean id="redisTemplate" class="org.springframework.data.redis.core.RedisTemplate">
-        <property name="connectionFactory" ref="connectionFactory"/>
+    <!-- redis操作模板，这里采用尽量面向对象的模板 -->
+    <bean id="redisTemplate" class="org.springframework.data.redis.core.StringRedisTemplate">
+        <property name="connectionFactory" ref="redisConnectionFactory"/>
+        <!--     如果不配置Serializer，那么存储的时候只能使用String，如果用对象类型存储，那么会提示错误 can't cast to String！！！-->
         <property name="keySerializer">
             <bean class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
         </property>
         <property name="valueSerializer">
             <bean class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer"/>
         </property>
+        <!--开启事务-->
+        <property name="enableTransactionSupport" value="true"/>
     </bean>
     <!-- cache配置 -->
     <bean id="methodCacheInterceptor" class="me.importtao.myssm.intercept.MethodCacheInterceptor">
@@ -43,31 +50,18 @@ http://www.springframework.org/schema/context/spring-context.xsd http://www.spri
         <!--将com.crossoverJie.service包下的所有select开头的方法加入拦截
         去掉select则加入所有方法w
         -->
-        <aop:pointcut id="controllerMethodPointcut" expression="
-            execution(* me.importtao.myssm.service.*.select*(..))"/>
-        <aop:pointcut id="selectMethodPointcut" expression="
-            execution(* me.importtao.myssm.dao..*Mapper.select*(..))"/>
+        <aop:pointcut id="controllerMethodPointcut" expression="execution(* me.importtao.myssm.service.*.select*(..))"/>
+        <aop:pointcut id="selectMethodPointcut" expression="execution(* me.importtao.myssm.dao.*Mapper.select*(..)) "/>
         <aop:advisor advice-ref="methodCacheInterceptor" pointcut-ref="controllerMethodPointcut"/>
     </aop:config>
-    <!--```
-    更多的配置可以直接在源码里面查看：[https://github.com/crossoverJie/SSM/blob/master/src/main/resources/spring-mybatis.xml](https://github.com/crossoverJie/SSM/blob/master/src/main/resources/spring-mybatis.xml)。
-    以上都写有注释，也都是一些简单的配置相信都能看懂。
-    下面我会着重说下如何配置缓存的。
-    # Spring切面使用缓存
-    Spring的`AOP`真是是一个好东西，还不太清楚是什么的同学建议先自行`Google`下吧。
-    在不使用切面的时候如果我们想给某个方法加入缓存的话肯定是在方法返回之前就要加入相应的逻辑判断，只有一个或几个倒还好，如果有几十上百个的话那GG了，而且维护起来也特别麻烦。
-    > 好在Spring的AOP可以帮我们解决这个问题。
-    > 这次就在我们需要加入缓存方法的切面加入这个逻辑，并且只需要一个配置即可搞定，就是上文中所提到的配置文件，如下：
-    ```xml-->
-    <!--配置切面拦截方法 -->
-    <aop:config proxy-target-class="true">
-        <!--将com.crossoverJie.service包下的所有select开头的方法加入拦截
-        去掉select则加入所有方法w
-        -->
-        <aop:pointcut id="controllerMethodPointcut" expression="
-            execution(* me.importtao.myssm.service.*.select*(..))"/>
-        <aop:pointcut id="selectMethodPointcut" expression="
-            execution(* me.importtao.myssm.dao..*Mapper.select*(..))"/>
-        <aop:advisor advice-ref="methodCacheInterceptor" pointcut-ref="controllerMethodPointcut"/>
-    </aop:config>
+    <!-- 加载配置数据 -->
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+        <property name="ignoreResourceNotFound" value="true" />
+        <property name="locations">
+            <list>
+                <value>classpath*:/redis.properties</value>
+            </list>
+        </property>
+    </bean>
 </beans>

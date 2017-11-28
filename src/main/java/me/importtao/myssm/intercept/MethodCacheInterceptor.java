@@ -4,7 +4,9 @@ import me.importtao.myssm.util.RedisUtil;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.apache.log4j.Logger;
-
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.springframework.stereotype.Component;
 
 
 import java.util.ArrayList;
@@ -18,6 +20,8 @@ import java.util.List;
  * @Description: TODO
  * @date ${date} ${time}
  */
+@Aspect
+@Component
 public class MethodCacheInterceptor implements MethodInterceptor {
     private Logger logger = Logger.getLogger(MethodCacheInterceptor.class);
     private RedisUtil redisUtil;
@@ -60,6 +64,7 @@ public class MethodCacheInterceptor implements MethodInterceptor {
     }
 
     @Override
+    @Around("execution(* me.importtao.myssm.dao.*Mapper.select*(..))")
     public Object invoke(MethodInvocation invocation) throws Throwable {
         Object value = null;
         logger.info("---------------------------进入切面---------------------------");
