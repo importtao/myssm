@@ -2,6 +2,19 @@
          xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee
                       http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
          version="3.1" metadata-complete="true">
+
+    <!--由Spring载入的Log4j配置文件位置-->
+    <context-param>
+        <param-name>log4jConfigLocation</param-name>
+        <param-value>classpath:log4j.properties</param-value>
+    </context-param>
+
+    <!--Spring log4j Config loader-->
+    <listener>
+        <listener-class>
+            org.springframework.web.util.Log4jConfigListener
+        </listener-class>
+    </listener>
     <!-- 如果是用mvn命令生成的xml，需要修改servlet版本为3.1 -->
     <!-- 配置DispatcherServlet -->
     <servlet>
