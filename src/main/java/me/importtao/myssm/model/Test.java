@@ -1,11 +1,15 @@
 package me.importtao.myssm.model;
 
-public class Test {
+import java.io.Serializable;
+
+public class Test implements Serializable {
     private Integer id;
 
     private String name;
 
     private String password;
+
+    private static final long serialVersionUID = 1L;
 
     public Integer getId() {
         return id;

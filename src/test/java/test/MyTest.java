@@ -31,14 +31,15 @@ public class MyTest {
     Logger logger = Logger.getLogger(MyTest.class);
     @Autowired
     TestService testService;
+    @Autowired
+    AopS aopS;
 
     @org.junit.Test
     public void test(){
 
-        Test t=(Test)testService.selectByPrimaryKey(1);
-        logger.info(JSON.toJSON(t));
-        AopS s = new AopS();
-        s.selectTest();
+        //Test t=(Test)testService.selectByPrimaryKey(1);
+        //logger.info(JSON.toJSON(t));
+        aopS.selectTest();
         logger.info("测试完成");
 
     }
